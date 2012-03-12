@@ -25,6 +25,15 @@ public class YsaModel {
 	public static ArrayList<Double> araKatmanCikisBiasleri = new ArrayList<Double>();
 	public static double cikisNetDegeri = 0.0;
 	public static double cikisfNetDegeri = 0.0;
+	public static double E = 0.0;
+	public static double cikisAraKatmanSigmaDegeri = 0.0;
+	public static ArrayList<Double> cikisAraKatmanDeltaAgirlikDegerleri = new ArrayList<Double>();
+	public static double alfa;
+	public static double lambda;
+	public static ArrayList<Double> cikisAraKatmanDeltaBiasDegerleri = new ArrayList<Double>();
+	public static ArrayList<Double> girisAraKatmanSigmaDegerleri = new ArrayList<Double>();
+	public static ArrayList<Double> girisAraKatmanDeltaAgirlikDegerleri = new ArrayList<Double>();
+	public static ArrayList<Double> girisAraKatmanDeltaBiasDegerleri = new ArrayList<Double>();
 	
 	public static void main(String[] args) {
 		
@@ -35,7 +44,12 @@ public class YsaModel {
 		girisSayisi = okunanDeger.nextInt();
 		System.out.print("Ara Katman Sayýsý: ");
 		araKatmanSayisi = okunanDeger.nextInt();
-		System.out.println();
+		
+		/*
+		 * Ýleri Yayýlým
+		 */
+		
+		System.out.println("\n----- Ýleri Yayýlým -----\n");
 		
 		girisAraKatmanAgirliklari = new double[girisSayisi][araKatmanSayisi];
 		araKatmanCikisAgirliklari = new double[araKatmanSayisi][1];  // çýkýþ n olunca 1 güncellenecek.		
@@ -56,20 +70,127 @@ public class YsaModel {
 		System.out.println("\n---Ara Katman-Çýkýþ Biasleri---");
 		araKatmanCikisBiasleri = biasAta(1); // 1 aslýnda çýkýþ sayýsý...
 		
-		System.out.println();
 		// ara katman netlerinin hesaplanmasý
+		System.out.println("\n---Ara katman NET deðerleri---");
 		netHesapla(girisSayisi, araKatmanSayisi, "arakatman");
 		
-		System.out.println();
 		// ara katman f(net) deðerlerinin hesaplanmasý...
+		System.out.println("\n---Ara katman f(NET) deðerleri---");
 		fNetHesapla("arakatman");
 		
 		// Tek çýkýþ için net deðerin hesaplanmasý...
 		netHesapla(araKatmanSayisi, 1, "cikis"); // 1 => çýkýþ sayýsý
+		System.out.println("\nÇýkýþ Net Deðeri = " + cikisNetDegeri);
 		
 		// Tek çýkýþ için f(net) deðerinin hesaplanmasý...
 		fNetHesapla("cikis");
+		System.out.println("\nÇýkýþ f(Net) = " + cikisfNetDegeri);
 		
+		/*
+		 * Ýleri yayýlým sonu
+		 * Geri yayýlým baþlangýcý
+		 */
+		
+		System.out.println("\n----- Geri Yayýlým -----\n");
+		
+		// Hata miktarý E'nin hesaplanmasý
+		System.out.print("Beklenen Deðer = ");
+		int beklenenDeger = okunanDeger.nextInt();
+		E = beklenenDeger - cikisfNetDegeri;
+		System.out.println("Hata Miktarý E = " + E + "\n");
+		
+		/*
+		 * Çýkýþ-Ara katman arasý geri yayýlým iþlemleri...
+		 */
+		
+		// Çýkýþýmýz tek olduðu için tek deðiþkende tutulan sigma deðeri
+		// sigma1 = C1*(1-C1)*E
+		cikisAraKatmanSigmaDegeri = cikisfNetDegeri * (1 - cikisfNetDegeri) * E;
+		System.out.println("Çýkýþ-Ara Katman Arasý Sigma Deðeri = " + cikisAraKatmanSigmaDegeri + "\n");
+
+		/*
+		 * Geri yayýlýmlý hesaplamada çarpan olarak kullanýlacak
+		 * olan alfa ve lambda deðerleri okunuyor.
+		 */
+//		Scanner okunanDeger2 = new Scanner(System.in);
+		System.out.print("Alfa = ");
+		alfa = okunanDeger.nextDouble();
+		System.out.print("Lambda = ");
+		lambda = okunanDeger.nextDouble();
+		
+		System.out.println();
+		
+		// Çýkýþ-Ara Katman arasý aðýrlýk deðiþimleri hesaplanýyor...
+		deltaAgirlikHesapla("cikis-araKatman");
+		
+		// Çýkýþ-Ara Katman arasý bias deðiþimleri hesaplanýyor...
+		deltaBiasHesapla("cikis-araKatman");
+		
+		System.out.println("-------------------------------------------\n");
+		
+		// Giriþ-Ara Katman arasý sigma deðerleri hesaplanýyor...
+		sigmaHesapla();
+		
+		// Giriþ-Ara Katman arasý aðýrlýk deðiþimleri hesaplanýyor...
+		deltaAgirlikHesapla("giris-araKatman");
+		
+		// Giriþ-Ara katman arasý bias deðiþimleri hesaplanýyor...
+		deltaBiasHesapla("giris-araKatman");
+			
+	}
+	
+	public static void sigmaHesapla(){
+		double sigmaDegeri = 0.0;
+		for (int i = 0; i < araKatmanfNetleri.size(); i++) {
+			sigmaDegeri = araKatmanfNetleri.get(i) * (1 - araKatmanfNetleri.get(i) * cikisAraKatmanSigmaDegeri * araKatmanCikisAgirliklari[i][0]);
+			System.out.println("Giriþ-Ara Katman arasý " + (i+1) + ". Sigma Deðeri = " + sigmaDegeri);
+			girisAraKatmanSigmaDegerleri.add(sigmaDegeri);
+		}
+		System.out.println();
+	}
+	
+	public static void deltaBiasHesapla(String gorev){
+		if (gorev.equals("cikis-araKatman")){
+			double deltaBiasDegeri = lambda * cikisAraKatmanSigmaDegeri;
+			for (int i = 0; i < araKatmanCikisBiasleri.size(); i++) {
+				deltaBiasDegeri = lambda * cikisAraKatmanSigmaDegeri;
+				System.out.println("Çýkýþ-Ara Katman arasý " + (i+1) + ". deltaBias = " + deltaBiasDegeri);
+				cikisAraKatmanDeltaBiasDegerleri.add(deltaBiasDegeri);
+			}
+		}
+		else if (gorev.equals("giris-araKatman")){
+			double deltaBiasDegeri = 0.0;
+			for (int i = 0; i < girisAraKatmanBiasleri.size(); i++) {
+				deltaBiasDegeri = lambda * girisAraKatmanSigmaDegerleri.get(i);
+				System.out.println("Giriþ-Ara Katman arasý " + (i+1) + ". deltaBias = " + deltaBiasDegeri);
+				girisAraKatmanDeltaBiasDegerleri .add(deltaBiasDegeri);
+			}
+		}
+		System.out.println();
+	}
+	
+	public static void deltaAgirlikHesapla(String gorev){
+		if (gorev.equals("cikis-araKatman")){
+			double deltaAgirlikDegeri = 0.0;
+			for (int i = 0; i < araKatmanCikisAgirliklari.length; i++) {
+				deltaAgirlikDegeri = lambda * cikisAraKatmanSigmaDegeri * araKatmanfNetleri.get(i);
+				System.out.println("Çýkýþ-Ara Katman arasý " + (i+1) + ". deltaAðýrlýk = " + deltaAgirlikDegeri);
+				cikisAraKatmanDeltaAgirlikDegerleri.add(deltaAgirlikDegeri);
+			}
+		}
+		else if (gorev.equals("giris-araKatman")){
+			double deltaAgirlikDegeri = 0.0;
+			int indis = 0;
+			for (int i = 0; i < girisAraKatmanAgirliklari.length; i++) {
+				for (int j = 0; j < girisAraKatmanAgirliklari.length; j++) {
+					deltaAgirlikDegeri = lambda * girisAraKatmanSigmaDegerleri.get(j) * girisDegerleri.get(j);
+					System.out.println("Giriþ-Ara Katman arasý " + (indis+1) + ". deltaAðýrlýk = " + deltaAgirlikDegeri);
+					girisAraKatmanDeltaAgirlikDegerleri.add(deltaAgirlikDegeri);
+					indis++;
+				}
+			}
+		}
+		System.out.println();
 	}
 
 	public static double[][] agirlikAta(int satirSayisi, int sutunSayisi) {
@@ -116,7 +237,6 @@ public class YsaModel {
 			}
 			netDeger += araKatmanCikisBiasleri.get(0); // 0, çýkýþ sayýsý artýnca güncellencek.
 			cikisNetDegeri = netDeger;
-			System.out.println("\nÇýkýþ Net Deðeri = " + cikisNetDegeri);
 		}
 	}
 	
@@ -131,7 +251,6 @@ public class YsaModel {
 		}
 		else if (gorev.equals("cikis")){
 			cikisfNetDegeri = fnet(cikisNetDegeri);
-			System.out.println("\nÇýkýþ f(Net) = " + cikisfNetDegeri);
 		}
 	}
 	
